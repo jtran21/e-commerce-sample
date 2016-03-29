@@ -49,9 +49,7 @@
 	                "dynamodb:PutItem",
 	                "dynamodb:UpdateItem"
 	            ],
-	            "Resource": [
-	                "arn:aws:dynamodb:us-west-2:075452263468:table/e-commerce-sample-product-history",
-	            ]
+	            "Resource": "arn:aws:dynamodb:us-west-2:075452263468:table/e-commerce-sample-product-history" 
 	        }
 			
           ]
