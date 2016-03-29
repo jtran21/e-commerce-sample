@@ -8,22 +8,29 @@ module.exports.handler = function(event, context) {
 
   var async = require('async');
 
+  console.log("I SHOULD SEE THIS!");
+
   var write_product_history_event = function(callback) {
 
-    var user_guid="34aba";
-    var timestamp = "3424232244";
-    var product_id = "111";
+    var user_guid = event.user_guid;
+    var timestamp = event.timestamp;
+    var product_id = event.product_id;
     var DYNAMODB_TABLE_NAME = "e-commerce-sample-product-history"
 
     var AWS = require('aws-sdk');
     var DOC = require('dynamodb-doc');
     var dynamo = new DOC.DynamoDB();
 
+    console.log(user_guid);
+    console.log(timestamp);
+    console.log(product_id);
+
     var item = {
       "user_guid": user_guid,
-      "timestamp": timestamp,
+      "timestamp": parseInt(timestamp),
       "product_id": product_id
     };
+    console.log(item);
 
     var mycallback = function(err, data) {
        if(err) {
@@ -31,17 +38,17 @@ module.exports.handler = function(event, context) {
            callback('unable to update DynamoDB table at this time');
        } else {
            console.log(data);
-           callback(null);
+           callback(null, "one", "two");
        }
     };
     dynamo.putItem({TableName:DYNAMODB_TABLE_NAME, Item:item}, mycallback);
   };
 
 
-  var step1 = function(callback) {
-    console.log("yhello");
-    callback(null, "one", "two");
-  }
+  // var step1 = function(callback) {
+  //   console.log("yhello");
+  //   callback(null, "one", "two");
+  // }
 
   var step2 = function(arg1, arg2, callback) {
     console.log("xthere" + arg1);
@@ -61,7 +68,7 @@ module.exports.handler = function(event, context) {
     } else {
       console.log("Function completed!")
       return context.done(null, {
-        message: 'Hello world' +  result
+        message: 'Hello world ' +  result
       });
     }
   });
