@@ -7,6 +7,23 @@
 module.exports.handler = function(event, context) {
 
   var async = require('async');
+  var redis = require("redis");
+  var redis_client = redis.createClient(6379, "e-commerce-sample.oydp69.0001.usw2.cache.amazonaws.com");
+
+  redis_client.on("error", function (err) {
+    console.log("Error " + err);
+  });
+
+  redis_client.set("string key", "string val", redis.print);
+  redis_client.hset("hash key", "hashtest 1", "some value", redis.print);
+  redis_client.hset(["hash key", "hashtest 2", "some other value"], redis.print);
+  redis_client.hkeys("hash key", function (err, replies) {
+      console.log(replies.length + " replies:");
+      replies.forEach(function (reply, i) {
+          console.log("    " + i + ": " + reply);
+      });
+      redis_client.quit();
+  });
 
   console.log("I SHOULD SEE THIS!");
 
