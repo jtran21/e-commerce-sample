@@ -2,6 +2,9 @@
 
 // HISTORY service
 // Store product view
+// Flow:
+//   1. Write the product history event to DynamoDB
+//   2. Write the product history event to Redis
 
 module.exports.handler = function(event, context) {
 
@@ -29,7 +32,7 @@ module.exports.handler = function(event, context) {
     console.log(item);
 
     var mycallback = function(err, data) {
-       if(err) {
+       if (err) {
            console.log("Issue writing to DynamoDB");
            console.log(err);
            callback('unable to update DynamoDB table at this time');
@@ -45,8 +48,14 @@ module.exports.handler = function(event, context) {
 
 
   var write_to_cache = function(arg1, arg2, callback) {
-    console.log("Entering write_to_cache());
+
+    var user_guid = event.user_guid;
+    var product_id = event.product_id;
+    var MAX_ITEMS_TO_RETAIN_IN_CACHE = 5;
+
+    console.log("Entering write_to_cache()");
     console.log("Creating Redis client");
+
     var redis_client = redis.createClient(6379, "e-commerce-sample-rc.oydp69.0001.usw2.cache.amazonaws.com");
 
     console.log("Connecting to Redis");
@@ -54,30 +63,48 @@ module.exports.handler = function(event, context) {
       console.log("Error " + err);
     });
     console.log("Connected to Redis");
-    redis_client.set("key_xyz", "sample_val", function(err, reply) {
-      var status = 500;
+    redis_client.lpush(user_guid, product_id, function(err, reply) {
+      console.log("Redis: performing LPUSH");
+
       if (err === null) {
         if (reply === null) {
-          console.log("Issue writing to Redis");
-          console.log("Completed writing to cache");
-          callback(null, "done");
-        } else if (reply === "OK") {
-          console.log("Successfully wrote to Redis");
-          console.log("Completed writing to cache");
-          callback(null, "done");
+          console.log("Error: Issue appending item to list in Redis");
+          callback(null, "error"); // fail silently
+
+        } else {
+          console.log("Successfully appended item to list in Redis");
+          console.log("Redis: performing LTRIM");
+          redis_client.ltrim(user_guid, 0, MAX_ITEMS_TO_RETAIN_IN_CACHE - 1, function(err2, reply2) {
+            if (err2 === null) {
+              if (reply2 === null) {
+                console.log("Error: Issue trimming list in Redis");
+                callback(null, "error"); // fail silently
+              } else {
+                console.log("Successfully trimmed list in Redis");
+                console.log("Completed Redis interactions");
+                callback(null, "done");
+              }
+            } else {
+              console.log("Error: Issue trimming list in Redis - error 2");
+              callback(null, "error"); // fail silently
+            }
+          });
         }
+      } else {
+        console.log("Error: Issue appending item to list in Redis - error 2");
+        // fail silently
+        callback(null, "error");
       }
     });
   }
 
-  // async.waterfall([write_to_cache], function(err, result){
   async.waterfall([write_to_dynamodb, write_to_cache], function(err, result){
     if (err) {
       console.log("Something went wrong!")
     } else {
       console.log("Function completed!")
       return context.done(null, {
-        message: 'Hello world ' +  result
+        message: 'Function completed! ' +  result
       });
     }
   });
