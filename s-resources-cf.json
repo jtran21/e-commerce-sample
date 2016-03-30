@@ -50,7 +50,17 @@
 	                "dynamodb:UpdateItem"
 	            ],
 	            "Resource": "arn:aws:dynamodb:us-west-2:075452263468:table/e-commerce-sample-product-history" 
-	        }
+	        },
+			{
+			  "Sid": "LambdaVPC",
+			  "Effect": "Allow",
+			  "Action": [
+			    "ec2:CreateNetworkInterface",
+			    "ec2:DescribeNetworkInterfaces",
+			    "ec2:DeleteNetworkInterface"
+			  ],
+			  "Resource": "*"
+			}
 			
           ]
         },
