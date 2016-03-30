@@ -3,32 +3,14 @@
 // HISTORY service
 // Store product view
 
-
 module.exports.handler = function(event, context) {
 
   var async = require('async');
   var redis = require("redis");
-  var redis_client = redis.createClient(6379, "e-commerce-sample.oydp69.0001.usw2.cache.amazonaws.com");
 
-  redis_client.on("error", function (err) {
-    console.log("Error " + err);
-  });
+  var write_to_dynamodb = function(callback) {
 
-  redis_client.set("string key", "string val", redis.print);
-  redis_client.hset("hash key", "hashtest 1", "some value", redis.print);
-  redis_client.hset(["hash key", "hashtest 2", "some other value"], redis.print);
-  redis_client.hkeys("hash key", function (err, replies) {
-      console.log(replies.length + " replies:");
-      replies.forEach(function (reply, i) {
-          console.log("    " + i + ": " + reply);
-      });
-      redis_client.quit();
-  });
-
-  console.log("I SHOULD SEE THIS!");
-
-  var write_product_history_event = function(callback) {
-
+    console.log("Entering: write_to_dynamodb()");
     var user_guid = event.user_guid;
     var timestamp = event.timestamp;
     var product_id = event.product_id;
@@ -38,48 +20,58 @@ module.exports.handler = function(event, context) {
     var DOC = require('dynamodb-doc');
     var dynamo = new DOC.DynamoDB();
 
-    console.log(user_guid);
-    console.log(timestamp);
-    console.log(product_id);
-
     var item = {
       "user_guid": user_guid,
       "timestamp": parseInt(timestamp),
       "product_id": product_id
     };
+    console.log("Item to store in DynamoDB");
     console.log(item);
 
     var mycallback = function(err, data) {
        if(err) {
+           console.log("Issue writing to DynamoDB");
            console.log(err);
            callback('unable to update DynamoDB table at this time');
        } else {
-           console.log(data);
-           callback(null, "one", "two");
+          console.log("Successfully wrote to DynamoDB");
+          console.log(data);
+          callback(null, "one", "two");
        }
     };
+    console.log("Initiating DynamoDB write");
     dynamo.putItem({TableName:DYNAMODB_TABLE_NAME, Item:item}, mycallback);
   };
 
 
-  // var step1 = function(callback) {
-  //   console.log("yhello");
-  //   callback(null, "one", "two");
-  // }
+  var write_to_cache = function(arg1, arg2, callback) {
+    console.log("Entering write_to_cache());
+    console.log("Creating Redis client");
+    var redis_client = redis.createClient(6379, "e-commerce-sample-rc.oydp69.0001.usw2.cache.amazonaws.com");
 
-  var step2 = function(arg1, arg2, callback) {
-    console.log("xthere" + arg1);
-    console.log("xthere2" + arg2);
-    callback(null, "three");
+    console.log("Connecting to Redis");
+    redis_client.on("error", function (err) {
+      console.log("Error " + err);
+    });
+    console.log("Connected to Redis");
+    redis_client.set("key_xyz", "sample_val", function(err, reply) {
+      var status = 500;
+      if (err === null) {
+        if (reply === null) {
+          console.log("Issue writing to Redis");
+          console.log("Completed writing to cache");
+          callback(null, "done");
+        } else if (reply === "OK") {
+          console.log("Successfully wrote to Redis");
+          console.log("Completed writing to cache");
+          callback(null, "done");
+        }
+      }
+    });
   }
 
-  var step3 = function(arg3, callback) {
-    console.log("all done" + arg3);
-    callback(null, "done");
-    //
-  }
-
-  async.waterfall([write_product_history_event, step2, step3], function(err, result){
+  // async.waterfall([write_to_cache], function(err, result){
+  async.waterfall([write_to_dynamodb, write_to_cache], function(err, result){
     if (err) {
       console.log("Something went wrong!")
     } else {
@@ -90,30 +82,3 @@ module.exports.handler = function(event, context) {
     }
   });
 }
-
-/*
-  async.series([
-      function(callback){ step1(callback); },
-      function(callback){ step2(callback); },
-      function(callback){ return step3(callback); }
-  ]);
-*/
-
-  //var USER_GUID="34aba"
-  //var DYNAMODB_TABLE_NAME = "e-commerce-sample-product-history"
-
-  // Overall flow
-  // 1. Write the product history event to ElastiCache
-  // 2. Write the product history in DynamoDB
-  // 3. Read prior product history event records from ElastiCache
-  // 4. Read product data from ElastiCache
-  // 5. Call ProductDetails service to populate any missing product detail records
-  // 6. Merge product data with cached history
-  // 7. Return result
-
-
-  // 1. Write the product history event to ElastiCache
-  //write_product_history_event()
-
-  // 2. Write the product history in DynamoDB
-

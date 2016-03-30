@@ -45,7 +45,11 @@
     "SERVERLESS_REGION": "${region}"
   },
   "vpc": {
-    "securityGroupIds": ["sg-dcc8b4bb"],
-    "subnetIds": ["subnet-851017dc"]
+    "securityGroupIds": [
+      "sg-dcc8b4bb"
+    ],
+    "subnetIds": [
+      "subnet-851017dc"
+    ]
   }
 }
