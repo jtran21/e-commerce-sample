@@ -38,7 +38,6 @@ module.exports.handler = function(event, context) {
            callback('unable to update DynamoDB table at this time');
        } else {
           console.log("Successfully wrote to DynamoDB");
-          console.log(data);
           callback(null, "one", "two");
        }
     };
@@ -92,8 +91,7 @@ module.exports.handler = function(event, context) {
         }
       } else {
         console.log("Error: Issue appending item to list in Redis - error 2");
-        // fail silently
-        callback(null, "error");
+        callback(null, "error"); // fail silently
       }
     });
   }
@@ -104,7 +102,7 @@ module.exports.handler = function(event, context) {
     } else {
       console.log("Function completed!")
       return context.done(null, {
-        message: 'Function completed! ' +  result
+        message: 'Function completed! Result: ' +  result
       });
     }
   });

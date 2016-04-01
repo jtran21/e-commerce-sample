@@ -1,0 +1,124 @@
+## Redis commands
+lpush mylist 234
+ltrim mylist 0 2
+lpush mylist 134
+ltrim mylist 0 2
+lpush mylist 881
+ltrim mylist 0 2
+lpush mylist 141
+ltrim mylist 0 2
+lrange mylist 0 -1
+
+{
+  "user_guid": "32424235",
+  "timestamp": "32432418",
+  "product_id": "abcdefghi"
+}
+
+========================================
+
+HISTORY service
+
+[x] Install Serverless on our machines
+
+[x] Setup Serverless config files
+
+[x] Create Kinesis stream
+
+[x] Create Elasticache service
+
+[x] Create DDB table
+
+[x] Modify IAM Policy to give Lambda access to Kinesis and DDB
+
+[ ] Lambda [history_store_product_view]: API handler for POST which writes to Kinesis stream
+
+[ ] Lambda: [history_retrieve_product_views]API handler for GET which reads from Kinesis stream and writes to DynamoDB
+      [ ] Get product IDs from DynamoDB
+      [ ] Get product details
+
+[ ] Define Swagger definition
+
+[ ] Create CFN template to provision DynamoDB and Kinesis
+
+========================================
+
+ORDERS service
+
+[ ] Create Kinesis stream
+
+[ ] Define Swagger definition
+
+[ ] Lambda: API handler for POST which writes to Kinesis stream
+
+[ ] Lambda: reads from Kinesis stream and writes to DynamoDB
+
+[ ] Lambda: reads from DynamoDB stream and calls one of the 3 Lambda processing functions
+
+[ ] Lambda: Process New Order
+
+[ ] Lambda: Process Cancellation
+
+[ ] Lambda: Process Updated Order
+
+[ ] Lambda: API handler for GET which reads from DynamoDB
+     [ ] Get FulfillmentService status
+
+
+[ ] Create DynamoDB table
+
+
+Github repo: e-commerce-sample
+
+## Install Serverless
+sudo npm install serverless -g
+
+serverless project create
+serverless function create history/history_store_product_view
+serverless function create history/history_retrieve_product_views
+serverless function create history/history_retrieve_product_views-mock
+serverless dash deploy
+
+## if you change the IAM policy, you need to re-deploy the CFN template
+sls resources deploy
+
+# Install the node modules inside the function folder
+cd history/history_store_product_view
+npm install --prefix=. async
+npm install --prefix=. redis
+
+# deploy individual function
+serverless function deploy
+
+aws kinesis create-stream \
+--stream-name e-commerce-sample-product-history \
+--shard-count 2
+
+aws elasticache create-cache-subnet-group \
+    --cache-subnet-group-name e-commerce-sample-cache-subnet-group \
+    --cache-subnet-group-description e-commerce-sample \
+    --subnet-ids subnet-851017dc
+
+aws elasticache create-cache-cluster \
+    --region us-west-2 \
+    --cache-cluster-id e-commerce-sample-rc \
+    --cache-node-type cache.t2.micro \
+    --engine redis \
+    --cache-subnet-group-name e-commerce-sample-cache-subnet-group \
+    --num-cache-nodes 1
+
+Need to set the security group for the ElastiCache cluster; open up port 6379
+
+    --cache-security-group-names e-commerce-sample-elasticache-sg \
+
+
+aws dynamodb create-table                         \
+--table-name e-commerce-sample-product-history     \
+--attribute-definitions                         \
+   AttributeName=user_guid,AttributeType=S       \
+   AttributeName=timestamp,AttributeType=N      \
+--key-schema                                    \
+   AttributeName=user_guid,KeyType=HASH          \
+   AttributeName=timestamp,KeyType=RANGE        \
+--provisioned-throughput                        \
+   ReadCapacityUnits=4,WriteCapacityUnits=4
